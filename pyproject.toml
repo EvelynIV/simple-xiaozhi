@@ -1,0 +1,51 @@
+[project]
+name = "simple-xiaozhi"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "wangchenyu",email = "1542169671@qq.com"}
+]
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "numpy (<2.3)",
+    "cryptography (>=46.0.3,<47.0.0)",
+    "sounddevice (>=0.5.3,<0.6.0)",
+    "opencv-python-headless (>=4.12.0.88,<5.0.0.0)",
+    "soxr (>=1.0.0,<2.0.0)",
+    "psutil (>=7.2.0,<8.0.0)",
+    "pillow (>=12.0.0,<13.0.0)",
+    "webrtcvad-wheels (>=2.0.14,<3.0.0)",
+    "pendulum (>=3.1.0,<4.0.0)",
+    "openai (>=2.14.0,<3.0.0)",
+    "opuslib (>=3.0.1,<4.0.0)",
+    "pynput (>=1.8.1,<2.0.0)",
+    "pyperclip (>=1.11.0,<2.0.0)",
+    "pypinyin (>=0.55.0,<0.56.0)",
+    "aiohttp (>=3.13.2,<4.0.0)",
+    "websockets (>=15.0.1,<16.0.0)",
+    "colorlog (>=6.10.1,<7.0.0)",
+    "qasync (>=0.28.0,<0.29.0)",
+    "py-machineid (>=1.0.0,<2.0.0)",
+    "mutagen (>=1.47.0,<2.0.0)",
+    "beautifulsoup4 (>=4.14.3,<5.0.0)",
+    "brotli (>=1.2.0,<2.0.0)",
+    "python-dateutil (>=2.9.0.post0,<3.0.0)",
+    "lunar-python (>=1.4.8,<2.0.0)",
+    "pyinstaller (>=6.17.0,<7.0.0)",
+    "rich (>=14.2.0,<15.0.0)",
+    "packaging (>=25.0,<26.0)",
+    "requests (>=2.32.5,<3.0.0)"
+]
+
+[tool.poetry]
+packages = [{include = "simple_xiaozhi", from = "src"}]
+
+[[tool.poetry.source]]
+name = "tuna"
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+priority = "primary"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
