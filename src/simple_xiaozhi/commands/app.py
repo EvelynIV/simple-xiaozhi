@@ -8,6 +8,14 @@ from simple_xiaozhi.utils.logging_config import setup_logging
 
 app = typer.Typer()
 
+async def _run_simple_client() -> None:
+    client_app = SimpleClientApp()
+    try:
+        await client_app.run()
+    except asyncio.CancelledError:
+        await client_app.close()
+        raise
+
 
 @app.command()
 def simple_client(
@@ -60,8 +68,10 @@ def simple_client(
         overrides["SYSTEM_OPTIONS"] = system_overrides
 
     ConfigManager.get_instance(config_dir=config_dir, overrides=overrides)
-    app = SimpleClientApp()
-    asyncio.run(app.run())
+    try:
+        asyncio.run(_run_simple_client())
+    except KeyboardInterrupt:
+        pass
 
 
 def main():
