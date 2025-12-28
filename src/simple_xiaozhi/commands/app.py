@@ -1,6 +1,6 @@
 import typer
 import asyncio
-
+from pathlib import Path
 
 from simple_xiaozhi.simple_client import SimpleClientApp
 from simple_xiaozhi.utils.logging_config import setup_logging
@@ -9,7 +9,13 @@ app = typer.Typer()
 
 
 @app.command()
-def simple_client():
+def simple_client(
+    config_dir: Path = typer.Argument(
+        "model-bin",
+        envvar="SIMPLE_XIAOZHI_CONFIG_DIR",
+        help="The config directory for simple xiaozhi client.",
+    )
+):
     setup_logging()
 
     app = SimpleClientApp()
