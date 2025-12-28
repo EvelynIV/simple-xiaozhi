@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-import os
 
 from simple_xiaozhi.utils.config_manager import ConfigManager
 
@@ -14,26 +13,13 @@ class ClientSettings:
     client_id: str
 
 
-def _env(name: str) -> str | None:
-    value = os.getenv(name)
-    return value if value else None
-
-
 def load_settings() -> ClientSettings:
     config = ConfigManager.get_instance()
 
-    ws_url = _env("XIAOZHI_WS_URL") or config.get_config(
-        "SYSTEM_OPTIONS.NETWORK.WEBSOCKET_URL"
-    )
-    access_token = _env("XIAOZHI_ACCESS_TOKEN") or config.get_config(
-        "SYSTEM_OPTIONS.NETWORK.WEBSOCKET_ACCESS_TOKEN"
-    )
-    device_id = _env("XIAOZHI_DEVICE_ID") or config.get_config(
-        "SYSTEM_OPTIONS.DEVICE_ID"
-    )
-    client_id = _env("XIAOZHI_CLIENT_ID") or config.get_config(
-        "SYSTEM_OPTIONS.CLIENT_ID"
-    )
+    ws_url = config.get_config("SYSTEM_OPTIONS.NETWORK.WEBSOCKET_URL")
+    access_token = config.get_config("SYSTEM_OPTIONS.NETWORK.WEBSOCKET_ACCESS_TOKEN")
+    device_id = config.get_config("SYSTEM_OPTIONS.DEVICE_ID")
+    client_id = config.get_config("SYSTEM_OPTIONS.CLIENT_ID")
 
     missing = [
         name

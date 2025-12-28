@@ -87,7 +87,7 @@ class ConfigManager:
             cls._instance._initialized = False
         return cls._instance
 
-    def __init__(self, config_dir: Path | None = None):
+    def __init__(self, config_dir: Path | None = None, overrides: Dict[str, Any] | None = None):
         """
         初始化配置管理器.
         """
@@ -95,8 +95,11 @@ class ConfigManager:
             if config_dir is not None:
                 self._set_config_dir(config_dir)
                 self._config = self._load_config()
+            if overrides is not None:
+                self.set_overrides(overrides)
             return
         self._initialized = True
+        self._overrides: Dict[str, Any] = {}
 
         # 初始化配置文件路径
         self._init_config_paths(config_dir)
@@ -106,6 +109,8 @@ class ConfigManager:
 
         # 加载配置
         self._config = self._load_config()
+        if overrides is not None:
+            self.set_overrides(overrides)
 
     def _set_config_dir(self, config_dir: Path) -> None:
         config_path = Path(config_dir).expanduser()
@@ -204,16 +209,30 @@ class ConfigManager:
                 result[key] = value
         return result
 
+    @staticmethod
+    def _get_value_by_path(config: dict, path: str) -> Any:
+        value = config
+        for key in path.split("."):
+            if not isinstance(value, dict) or key not in value:
+                raise KeyError(path)
+            value = value[key]
+        return value
+
+    def set_overrides(self, overrides: Dict[str, Any] | None) -> None:
+        self._overrides = overrides or {}
+
     def get_config(self, path: str, default: Any = None) -> Any:
         """
         通过路径获取配置值
         path: 点分隔的配置路径，如 "SYSTEM_OPTIONS.NETWORK.MQTT_INFO"
         """
         try:
-            value = self._config
-            for key in path.split("."):
-                value = value[key]
-            return value
+            if self._overrides:
+                try:
+                    return self._get_value_by_path(self._overrides, path)
+                except KeyError:
+                    pass
+            return self._get_value_by_path(self._config, path)
         except (KeyError, TypeError):
             return default
 
@@ -299,13 +318,16 @@ class ConfigManager:
                 logger.error(f"初始化DEVICE_ID时出错: {e}")
 
     @classmethod
-    def get_instance(cls, config_dir: Path | None = None):
+    def get_instance(cls, config_dir: Path | None = None, overrides: Dict[str, Any] | None = None):
         """
         获取配置管理器实例.
         """
         if cls._instance is None:
-            cls._instance = cls(config_dir=config_dir)
-        elif config_dir is not None:
-            cls._instance._set_config_dir(config_dir)
-            cls._instance._config = cls._instance._load_config()
+            cls._instance = cls(config_dir=config_dir, overrides=overrides)
+        else:
+            if config_dir is not None:
+                cls._instance._set_config_dir(config_dir)
+                cls._instance._config = cls._instance._load_config()
+            if overrides is not None:
+                cls._instance.set_overrides(overrides)
         return cls._instance
