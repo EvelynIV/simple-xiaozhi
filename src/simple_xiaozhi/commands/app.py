@@ -3,6 +3,7 @@ import asyncio
 from pathlib import Path
 
 from simple_xiaozhi.simple_client import SimpleClientApp
+from simple_xiaozhi.utils.config_manager import ConfigManager
 from simple_xiaozhi.utils.logging_config import setup_logging
 
 app = typer.Typer()
@@ -18,6 +19,7 @@ def simple_client(
 ):
     setup_logging()
 
+    ConfigManager.get_instance(config_dir=config_dir)
     app = SimpleClientApp()
     asyncio.run(app.run())
 

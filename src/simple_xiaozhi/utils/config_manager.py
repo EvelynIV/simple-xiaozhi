@@ -1,5 +1,6 @@
 import json
 import uuid
+from pathlib import Path
 from typing import Any, Dict
 
 from simple_xiaozhi.utils.logging_config import get_logger
@@ -77,7 +78,7 @@ class ConfigManager:
         },
     }
 
-    def __new__(cls):
+    def __new__(cls, *args, **kwargs):
         """
         确保单例模式.
         """
@@ -86,16 +87,19 @@ class ConfigManager:
             cls._instance._initialized = False
         return cls._instance
 
-    def __init__(self):
+    def __init__(self, config_dir: Path | None = None):
         """
         初始化配置管理器.
         """
         if self._initialized:
+            if config_dir is not None:
+                self._set_config_dir(config_dir)
+                self._config = self._load_config()
             return
         self._initialized = True
 
         # 初始化配置文件路径
-        self._init_config_paths()
+        self._init_config_paths(config_dir)
 
         # 确保必要的目录存在
         self._ensure_required_directories()
@@ -103,24 +107,31 @@ class ConfigManager:
         # 加载配置
         self._config = self._load_config()
 
-    def _init_config_paths(self):
-        """
-        初始化配置文件路径.
-        """
-        # 使用resource_finder查找或创建配置目录
-        self.config_dir = resource_finder.find_config_dir()
-        if not self.config_dir:
-            # 如果找不到配置目录，在项目根目录下创建
-            project_root = resource_finder.get_project_root()
-            self.config_dir = project_root / "config"
-            self.config_dir.mkdir(parents=True, exist_ok=True)
-            logger.info(f"创建配置目录: {self.config_dir.absolute()}")
-
+    def _set_config_dir(self, config_dir: Path) -> None:
+        config_path = Path(config_dir).expanduser()
+        if not config_path.is_absolute():
+            config_path = (Path.cwd() / config_path).resolve()
+        else:
+            config_path = config_path.resolve()
+        self.config_dir = config_path
         self.config_file = self.config_dir / "config.json"
 
-        # 记录配置文件路径
-        logger.info(f"配置目录: {self.config_dir.absolute()}")
-        logger.info(f"配置文件: {self.config_file.absolute()}")
+    def _init_config_paths(self, config_dir: Path | None = None):
+        """
+        Initialize config file paths.
+        """
+        if config_dir is not None:
+            self._set_config_dir(config_dir)
+        else:
+            self.config_dir = resource_finder.find_config_dir()
+            if not self.config_dir:
+                project_root = resource_finder.get_project_root()
+                self.config_dir = project_root / "config"
+            self.config_file = self.config_dir / "config.json"
+        self.config_dir.mkdir(parents=True, exist_ok=True)
+
+        logger.info(f"Config directory: {self.config_dir.absolute()}")
+        logger.info(f"Config file: {self.config_file.absolute()}")
 
     def _ensure_required_directories(self):
         """
@@ -145,15 +156,6 @@ class ConfigManager:
         加载配置文件，如果不存在则创建.
         """
         try:
-            # 首先尝试使用resource_finder查找配置文件
-            config_file_path = resource_finder.find_file("model-bin/config.json")
-
-            if config_file_path:
-                logger.debug(f"使用resource_finder找到配置文件: {config_file_path}")
-                config = json.loads(config_file_path.read_text(encoding="utf-8"))
-                return self._merge_configs(self.DEFAULT_CONFIG, config)
-
-            # 如果resource_finder没找到，尝试使用实例变量中的路径
             if self.config_file.exists():
                 logger.debug(f"使用实例路径找到配置文件: {self.config_file}")
                 config = json.loads(self.config_file.read_text(encoding="utf-8"))
@@ -299,10 +301,13 @@ class ConfigManager:
                 logger.error(f"初始化DEVICE_ID时出错: {e}")
 
     @classmethod
-    def get_instance(cls):
+    def get_instance(cls, config_dir: Path | None = None):
         """
         获取配置管理器实例.
         """
         if cls._instance is None:
-            cls._instance = cls()
+            cls._instance = cls(config_dir=config_dir)
+        elif config_dir is not None:
+            cls._instance._set_config_dir(config_dir)
+            cls._instance._config = cls._instance._load_config()
         return cls._instance
