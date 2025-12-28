@@ -161,9 +161,7 @@ class ConfigManager:
                 config = json.loads(self.config_file.read_text(encoding="utf-8"))
                 return self._merge_configs(self.DEFAULT_CONFIG, config)
             else:
-                # 创建默认配置文件
-                logger.info("配置文件不存在，创建默认配置")
-                self._save_config(self.DEFAULT_CONFIG)
+                logger.info("配置文件不存在，使用默认配置")
                 return self.DEFAULT_CONFIG.copy()
 
         except Exception as e:
