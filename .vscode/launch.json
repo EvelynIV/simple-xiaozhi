@@ -8,7 +8,7 @@
             "name": "simple client",
             "type": "debugpy",
             "request": "launch",
-            "program": "tests/simple_client.py",
+            "program": "src/simple_xiaozhi/commands/app.py",
             "console": "integratedTerminal",
             "envFile": "${workspaceFolder}/.env"
         },
