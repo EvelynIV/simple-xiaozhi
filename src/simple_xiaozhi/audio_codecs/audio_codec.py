@@ -61,7 +61,7 @@ class AudioCodec:
             audio_processor: 可选的音频处理器（AEC等），通过依赖注入解耦
         """
         # 获取配置管理器
-        self.config = ConfigManager.get_instance()
+        self.config_manager = ConfigManager.get_instance()
 
         # Opus编解码器
         self.opus_encoder = None
@@ -154,10 +154,10 @@ class AudioCodec:
         """
         加载或初始化设备配置.
         """
-        audio_config = self.config.get_config("AUDIO_DEVICES", {}) or {}
+        audio_config = self.config_manager.config.AUDIO_DEVICES
 
-        input_device_id = audio_config.get("input_device_id")
-        output_device_id = audio_config.get("output_device_id")
+        input_device_id = audio_config.input_device_id
+        output_device_id = audio_config.output_device_id
 
         # 首次运行：自动选择设备
         if input_device_id is None or output_device_id is None:
@@ -168,14 +168,10 @@ class AudioCodec:
         # 从配置加载
         self.mic_device_id = input_device_id
         self.speaker_device_id = output_device_id
-        self.device_input_sample_rate = audio_config.get(
-            "input_sample_rate", AudioConfig.INPUT_SAMPLE_RATE
-        )
-        self.device_output_sample_rate = audio_config.get(
-            "output_sample_rate", AudioConfig.OUTPUT_SAMPLE_RATE
-        )
-        self.input_channels = audio_config.get("input_channels", 1)
-        self.output_channels = audio_config.get("output_channels", 1)
+        self.device_input_sample_rate = audio_config.input_sample_rate
+        self.device_output_sample_rate = audio_config.output_sample_rate
+        self.input_channels = audio_config.input_channels
+        self.output_channels = audio_config.output_channels
 
         # 计算设备帧大小
         self._device_input_frame_size = int(
@@ -240,21 +236,17 @@ class AudioCodec:
         )
 
         # 保存配置（首次运行时保存）
-        self.config.update_config("AUDIO_DEVICES.input_device_id", self.mic_device_id)
-        self.config.update_config("AUDIO_DEVICES.input_device_name", in_info["name"])
-        self.config.update_config(
-            "AUDIO_DEVICES.input_sample_rate", self.device_input_sample_rate
-        )
-        self.config.update_config("AUDIO_DEVICES.input_channels", self.input_channels)
-
-        self.config.update_config(
-            "AUDIO_DEVICES.output_device_id", self.speaker_device_id
-        )
-        self.config.update_config("AUDIO_DEVICES.output_device_name", out_info["name"])
-        self.config.update_config(
-            "AUDIO_DEVICES.output_sample_rate", self.device_output_sample_rate
-        )
-        self.config.update_config("AUDIO_DEVICES.output_channels", self.output_channels)
+        config = self.config_manager.mutable_config
+        config.AUDIO_DEVICES.input_device_id = self.mic_device_id
+        config.AUDIO_DEVICES.input_device_name = in_info["name"]
+        config.AUDIO_DEVICES.input_sample_rate = self.device_input_sample_rate
+        config.AUDIO_DEVICES.input_channels = self.input_channels
+        config.AUDIO_DEVICES.output_device_id = self.speaker_device_id
+        config.AUDIO_DEVICES.output_device_name = out_info["name"]
+        config.AUDIO_DEVICES.output_sample_rate = self.device_output_sample_rate
+        config.AUDIO_DEVICES.output_channels = self.output_channels
+        if not self.config_manager.save():
+            logger.error("保存音频设备配置失败")
 
     async def _create_opus_codecs(self):
         """

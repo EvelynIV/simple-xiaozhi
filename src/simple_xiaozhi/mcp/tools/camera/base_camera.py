@@ -27,10 +27,10 @@ class BaseCamera(ABC):
         self.jpeg_data = {"buf": b"", "len": 0}  # 图像的JPEG字节数据  # 字节数据长度
 
         # 从配置中读取相机参数
-        config = ConfigManager.get_instance()
-        self.camera_index = config.get_config("CAMERA.camera_index", 0)
-        self.frame_width = config.get_config("CAMERA.frame_width", 640)
-        self.frame_height = config.get_config("CAMERA.frame_height", 480)
+        config = ConfigManager.get_instance().config
+        self.camera_index = config.CAMERA.camera_index
+        self.frame_width = config.CAMERA.frame_width
+        self.frame_height = config.CAMERA.frame_height
 
     @abstractmethod
     def capture(self) -> bool:

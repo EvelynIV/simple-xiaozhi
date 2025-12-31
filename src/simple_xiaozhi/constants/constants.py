@@ -2,7 +2,7 @@ import platform
 
 from simple_xiaozhi.utils.config_manager import ConfigManager
 
-config = ConfigManager.get_instance()
+config_manager = ConfigManager.get_instance()
 
 
 class ListeningMode:
@@ -66,7 +66,7 @@ def get_frame_duration() -> int:
     """
     try:
         # 检查是否为官方服务器
-        ota_url = config.get_config("SYSTEM_OPTIONS.NETWORK.OTA_VERSION_URL")
+        ota_url = config_manager.config.SYSTEM_OPTIONS.NETWORK.OTA_VERSION_URL
         if not is_official_server(ota_url):
             return 60
 
@@ -95,7 +95,7 @@ class AudioConfig:
     # 固定配置
     INPUT_SAMPLE_RATE = 16000  # 输入采样率16kHz
     # 输出采样率：官方服务器使用24kHz，其他使用16kHz
-    _ota_url = config.get_config("SYSTEM_OPTIONS.NETWORK.OTA_VERSION_URL")
+    _ota_url = config_manager.config.SYSTEM_OPTIONS.NETWORK.OTA_VERSION_URL
     OUTPUT_SAMPLE_RATE = 24000 if is_official_server(_ota_url) else 16000
     CHANNELS = 1  # 服务端协议要求：单声道
 

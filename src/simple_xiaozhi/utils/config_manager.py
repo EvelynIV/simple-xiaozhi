@@ -3,6 +3,8 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict
 
+from omegaconf import DictConfig, OmegaConf
+
 from simple_xiaozhi.utils.logging_config import get_logger
 from simple_xiaozhi.utils.resource_finder import resource_finder
 
@@ -87,7 +89,11 @@ class ConfigManager:
             cls._instance._initialized = False
         return cls._instance
 
-    def __init__(self, config_dir: Path | None = None, overrides: Dict[str, Any] | None = None):
+    def __init__(
+        self,
+        config_dir: Path | None = None,
+        overrides: Dict[str, Any] | None = None,
+    ):
         """
         初始化配置管理器.
         """
@@ -99,7 +105,7 @@ class ConfigManager:
                 self.set_overrides(overrides)
             return
         self._initialized = True
-        self._overrides: Dict[str, Any] = {}
+        self._overrides: DictConfig = OmegaConf.create({})
 
         # 初始化配置文件路径
         self._init_config_paths(config_dir)
@@ -156,24 +162,27 @@ class ConfigManager:
             cache_dir.mkdir(parents=True, exist_ok=True)
             logger.info(f"创建缓存目录: {cache_dir.absolute()}")
 
-    def _load_config(self) -> Dict[str, Any]:
+    def _build_default_config(self) -> DictConfig:
+        return OmegaConf.create(self.DEFAULT_CONFIG)
+
+    def _load_config(self) -> DictConfig:
         """
         加载配置文件，如果不存在则创建.
         """
         try:
             if self.config_file.exists():
                 logger.debug(f"使用实例路径找到配置文件: {self.config_file}")
-                config = json.loads(self.config_file.read_text(encoding="utf-8"))
-                return self._merge_configs(self.DEFAULT_CONFIG, config)
+                config = OmegaConf.load(self.config_file)
+                return OmegaConf.merge(self._build_default_config(), config)
             else:
                 logger.info("配置文件不存在，使用默认配置")
-                return self.DEFAULT_CONFIG.copy()
+                return self._build_default_config()
 
         except Exception as e:
             logger.error(f"配置加载错误: {e}")
-            return self.DEFAULT_CONFIG.copy()
+            return self._build_default_config()
 
-    def _save_config(self, config: dict) -> bool:
+    def _save_config(self, config: DictConfig) -> bool:
         """
         保存配置到文件.
         """
@@ -182,8 +191,9 @@ class ConfigManager:
             self.config_dir.mkdir(parents=True, exist_ok=True)
 
             # 保存配置文件
+            data = OmegaConf.to_container(config, resolve=True)
             self.config_file.write_text(
-                json.dumps(config, indent=2, ensure_ascii=False), encoding="utf-8"
+                json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
             )
             logger.debug(f"配置已保存到: {self.config_file}")
             return True
@@ -192,65 +202,24 @@ class ConfigManager:
             logger.error(f"配置保存错误: {e}")
             return False
 
-    @staticmethod
-    def _merge_configs(default: dict, custom: dict) -> dict:
-        """
-        递归合并配置字典.
-        """
-        result = default.copy()
-        for key, value in custom.items():
-            if (
-                key in result
-                and isinstance(result[key], dict)
-                and isinstance(value, dict)
-            ):
-                result[key] = ConfigManager._merge_configs(result[key], value)
-            else:
-                result[key] = value
-        return result
-
-    @staticmethod
-    def _get_value_by_path(config: dict, path: str) -> Any:
-        value = config
-        for key in path.split("."):
-            if not isinstance(value, dict) or key not in value:
-                raise KeyError(path)
-            value = value[key]
-        return value
-
     def set_overrides(self, overrides: Dict[str, Any] | None) -> None:
-        self._overrides = overrides or {}
+        self._overrides = OmegaConf.create(overrides or {})
 
-    def get_config(self, path: str, default: Any = None) -> Any:
-        """
-        通过路径获取配置值
-        path: 点分隔的配置路径，如 "SYSTEM_OPTIONS.NETWORK.MQTT_INFO"
-        """
-        try:
-            if self._overrides:
-                try:
-                    return self._get_value_by_path(self._overrides, path)
-                except KeyError:
-                    pass
-            return self._get_value_by_path(self._config, path)
-        except (KeyError, TypeError):
-            return default
+    @property
+    def config(self) -> DictConfig:
+        if self._overrides and len(self._overrides) > 0:
+            return OmegaConf.merge(self._config, self._overrides)
+        return self._config
 
-    def update_config(self, path: str, value: Any) -> bool:
+    @property
+    def mutable_config(self) -> DictConfig:
+        return self._config
+
+    def save(self) -> bool:
         """
-        更新特定配置项
-        path: 点分隔的配置路径，如 "SYSTEM_OPTIONS.NETWORK.MQTT_INFO"
+        保存当前配置到文件.
         """
-        try:
-            current = self._config
-            *parts, last = path.split(".")
-            for part in parts:
-                current = current.setdefault(part, {})
-            current[last] = value
-            return self._save_config(self._config)
-        except Exception as e:
-            logger.error(f"配置更新错误 {path}: {e}")
-            return False
+        return self._save_config(self._config)
 
     def reload_config(self) -> bool:
         """
@@ -274,10 +243,10 @@ class ConfigManager:
         """
         确保存在客户端ID.
         """
-        if not self.get_config("SYSTEM_OPTIONS.CLIENT_ID"):
+        if not self.config.SYSTEM_OPTIONS.CLIENT_ID:
             client_id = self.generate_uuid()
-            success = self.update_config("SYSTEM_OPTIONS.CLIENT_ID", client_id)
-            if success:
+            self._config.SYSTEM_OPTIONS.CLIENT_ID = client_id
+            if self.save():
                 logger.info(f"已生成新的客户端ID: {client_id}")
             else:
                 logger.error("保存新的客户端ID失败")
@@ -286,15 +255,13 @@ class ConfigManager:
         """
         从设备指纹初始化设备ID.
         """
-        if not self.get_config("SYSTEM_OPTIONS.DEVICE_ID"):
+        if not self.config.SYSTEM_OPTIONS.DEVICE_ID:
             try:
                 # 从efuse.json获取MAC地址作为DEVICE_ID
                 mac_address = device_fingerprint.get_mac_address_from_efuse()
                 if mac_address:
-                    success = self.update_config(
-                        "SYSTEM_OPTIONS.DEVICE_ID", mac_address
-                    )
-                    if success:
+                    self._config.SYSTEM_OPTIONS.DEVICE_ID = mac_address
+                    if self.save():
                         logger.info(f"从efuse.json获取DEVICE_ID: {mac_address}")
                     else:
                         logger.error("保存DEVICE_ID失败")
@@ -304,10 +271,8 @@ class ConfigManager:
                     fingerprint = device_fingerprint.generate_fingerprint()
                     mac_from_fingerprint = fingerprint.get("mac_address")
                     if mac_from_fingerprint:
-                        success = self.update_config(
-                            "SYSTEM_OPTIONS.DEVICE_ID", mac_from_fingerprint
-                        )
-                        if success:
+                        self._config.SYSTEM_OPTIONS.DEVICE_ID = mac_from_fingerprint
+                        if self.save():
                             logger.info(
                                 f"使用指纹中的MAC地址作为DEVICE_ID: "
                                 f"{mac_from_fingerprint}"

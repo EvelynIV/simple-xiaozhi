@@ -51,8 +51,8 @@ class SystemInitializer:
             await self.stage_3_ota_config()
 
             # 获取激活版本配置
-            activation_version = self.config_manager.get_config(
-                "SYSTEM_OPTIONS.NETWORK.ACTIVATION_VERSION", "v1"
+            activation_version = (
+                self.config_manager.config.SYSTEM_OPTIONS.NETWORK.ACTIVATION_VERSION
             )
 
             logger.info(f"激活版本: {activation_version}")
@@ -150,8 +150,9 @@ class SystemInitializer:
         )
 
         # 验证关键配置
-        client_id = self.config_manager.get_config("SYSTEM_OPTIONS.CLIENT_ID")
-        device_id = self.config_manager.get_config("SYSTEM_OPTIONS.DEVICE_ID")
+        config = self.config_manager.config
+        client_id = config.SYSTEM_OPTIONS.CLIENT_ID
+        device_id = config.SYSTEM_OPTIONS.DEVICE_ID
 
         logger.info(f"客户端ID: {client_id}")
         logger.info(f"设备ID: {device_id}")

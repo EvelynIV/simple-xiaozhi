@@ -190,9 +190,8 @@ class DeviceActivator:
             }
 
             # 获取激活URL
-            ota_url = self.config_manager.get_config(
-                "SYSTEM_OPTIONS.NETWORK.OTA_VERSION_URL"
-            )
+            config = self.config_manager.config
+            ota_url = config.SYSTEM_OPTIONS.NETWORK.OTA_VERSION_URL
             if not ota_url:
                 self.logger.error("未找到OTA URL配置")
                 return False
@@ -207,8 +206,8 @@ class DeviceActivator:
             # 设置请求头
             headers = {
                 "Activation-Version": "2",
-                "Device-Id": self.config_manager.get_config("SYSTEM_OPTIONS.DEVICE_ID"),
-                "Client-Id": self.config_manager.get_config("SYSTEM_OPTIONS.CLIENT_ID"),
+                "Device-Id": config.SYSTEM_OPTIONS.DEVICE_ID,
+                "Client-Id": config.SYSTEM_OPTIONS.CLIENT_ID,
                 "Content-Type": "application/json",
             }
 

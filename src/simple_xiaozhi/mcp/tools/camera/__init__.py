@@ -15,11 +15,11 @@ def get_camera_instance():
     """
     根据配置返回对应的摄像头实现.
     """
-    config = ConfigManager.get_instance()
+    config = ConfigManager.get_instance().config
 
     # 检查是否配置了智普AI
-    vl_key = config.get_config("CAMERA.VLapi_key")
-    vl_url = config.get_config("CAMERA.Local_VL_url")
+    vl_key = config.CAMERA.VLapi_key
+    vl_url = config.CAMERA.Local_VL_url
 
     if vl_key and vl_url:
         logger.info(f"Initializing VL Camera with URL: {vl_url}")

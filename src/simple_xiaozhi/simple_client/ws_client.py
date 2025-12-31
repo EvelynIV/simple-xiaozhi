@@ -22,12 +22,16 @@ class WebSocketClient:
         self._receiver_task: asyncio.Task | None = None
         self._on_json: Callable[[dict], Awaitable[None]] | None = None
         self._on_audio: Callable[[bytes], Awaitable[None]] | None = None
+        self._on_close: Callable[[], Awaitable[None]] | None = None
 
     def on_json(self, callback: Callable[[dict], Awaitable[None]]) -> None:
         self._on_json = callback
 
     def on_audio(self, callback: Callable[[bytes], Awaitable[None]]) -> None:
         self._on_audio = callback
+
+    def on_close(self, callback: Callable[[], Awaitable[None]]) -> None:
+        self._on_close = callback
 
     async def connect(self) -> None:
         headers = {
@@ -128,6 +132,10 @@ class WebSocketClient:
             return
         except Exception as exc:
             logger.warning("WebSocket receiver stopped: %s", exc)
+        finally:
+            # 连接关闭时通知主程序
+            if self._on_close:
+                await self._on_close()
 
     async def _handle_text(self, message: str) -> None:
         try:

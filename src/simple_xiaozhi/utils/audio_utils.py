@@ -6,6 +6,9 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import sounddevice as sd
 
+from simple_xiaozhi.utils.logging_config import get_logger
+
+logger = get_logger(__name__)
 # 可选：屏蔽常见虚拟/聚合设备（默认不选它们）
 _VIRTUAL_PATTERNS = [
     r"blackhole",
@@ -104,14 +107,17 @@ def safe_queue_put(
         return True
     except asyncio.QueueFull:
         if replace_oldest:
+            dropped_oldest = False
             try:
                 queue.get_nowait()  # 丢弃最旧的
+                dropped_oldest = True
                 queue.put_nowait(item)  # 放入新数据
-                return True
             except asyncio.QueueEmpty:
                 # 理论上不会发生,但保险起见
                 queue.put_nowait(item)
-                return True
+            if dropped_oldest:
+                logger.warning("队列已满，丢弃最旧音频帧")
+            return True
         return False
 
 

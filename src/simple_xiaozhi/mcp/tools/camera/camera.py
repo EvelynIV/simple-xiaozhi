@@ -19,10 +19,10 @@ class Camera:
         self.jpeg_data = {"buf": b"", "len": 0}  # 图像的JPEG字节数据  # 字节数据长度
 
         # 从配置中读取相机参数
-        config = ConfigManager.get_instance()
-        self.camera_index = config.get_config("CAMERA.camera_index", 0)
-        self.frame_width = config.get_config("CAMERA.frame_width", 640)
-        self.frame_height = config.get_config("CAMERA.frame_height", 480)
+        config = ConfigManager.get_instance().config
+        self.camera_index = config.CAMERA.camera_index
+        self.frame_width = config.CAMERA.frame_width
+        self.frame_height = config.CAMERA.frame_height
 
     @classmethod
     def get_instance(cls):
@@ -117,13 +117,13 @@ class Camera:
         """
         获取设备ID.
         """
-        return ConfigManager.get_instance().get_config("SYSTEM_OPTIONS.DEVICE_ID")
+        return ConfigManager.get_instance().config.SYSTEM_OPTIONS.DEVICE_ID
 
     def get_client_id(self):
         """
         获取客户端ID.
         """
-        return ConfigManager.get_instance().get_config("SYSTEM_OPTIONS.CLIENT_ID")
+        return ConfigManager.get_instance().config.SYSTEM_OPTIONS.CLIENT_ID
 
     def explain(self, question: str) -> str:
         """

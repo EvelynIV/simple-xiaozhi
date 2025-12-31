@@ -14,12 +14,12 @@ class ClientSettings:
 
 
 def load_settings() -> ClientSettings:
-    config = ConfigManager.get_instance()
+    config = ConfigManager.get_instance().config
 
-    ws_url = config.get_config("SYSTEM_OPTIONS.NETWORK.WEBSOCKET_URL")
-    access_token = config.get_config("SYSTEM_OPTIONS.NETWORK.WEBSOCKET_ACCESS_TOKEN")
-    device_id = config.get_config("SYSTEM_OPTIONS.DEVICE_ID")
-    client_id = config.get_config("SYSTEM_OPTIONS.CLIENT_ID")
+    ws_url = config.SYSTEM_OPTIONS.NETWORK.WEBSOCKET_URL
+    access_token = config.SYSTEM_OPTIONS.NETWORK.WEBSOCKET_ACCESS_TOKEN
+    device_id = config.SYSTEM_OPTIONS.DEVICE_ID
+    client_id = config.SYSTEM_OPTIONS.CLIENT_ID
 
     missing = [
         name

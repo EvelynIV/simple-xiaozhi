@@ -123,13 +123,10 @@ class NormalCamera(BaseCamera):
             return '{"success": false, "message": "Camera buffer is empty"}'
 
         # 准备请求头
+        config = ConfigManager.get_instance().config
         headers = {
-            "Device-Id": ConfigManager.get_instance().get_config(
-                "SYSTEM_OPTIONS.DEVICE_ID"
-            ),
-            "Client-Id": ConfigManager.get_instance().get_config(
-                "SYSTEM_OPTIONS.CLIENT_ID"
-            ),
+            "Device-Id": config.SYSTEM_OPTIONS.DEVICE_ID,
+            "Client-Id": config.SYSTEM_OPTIONS.CLIENT_ID,
         }
 
         if self.explain_token:

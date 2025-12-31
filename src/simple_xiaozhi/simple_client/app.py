@@ -24,6 +24,7 @@ class SimpleClientApp:
             self._ws = WebSocketClient(self._settings)
             self._ws.on_json(self._handle_json)
             self._ws.on_audio(self._handle_audio)
+            self._ws.on_close(self._handle_close)
             await self._ws.connect()
             await self._ws.handshake()
 
@@ -54,20 +55,26 @@ class SimpleClientApp:
         if self._audio:
             await self._audio.handle_incoming_audio(data)
 
+    async def _handle_close(self) -> None:
+        """处理服务端断开连接"""
+        logger.info("Server disconnected, stopping client")
+        self._stop_event.set()
+
     async def _handle_json(self, data: dict) -> None:
         msg_type = data.get("type")
         if msg_type in ("stt", "tts"):
-            text = data.get("text")
-            if text:
-                print(f"[{msg_type}] {text}")
+            print(f"[{msg_type}] {data}")
             return
         if msg_type == "llm":
-            emotion = data.get("emotion")
-            if emotion:
-                print(f"[llm] {emotion}")
+            # emotion = data.get("emotion")
+            # if emotion:
+            print(f"[llm] {data}")
             return
         if msg_type == "hello":
+            print(f"[hello] {data}")
             return
+        elif msg_type == "mcp":
+            print(f"[mcp] {data}")
         if msg_type:
             print(f"[{msg_type}] {data}")
         else:

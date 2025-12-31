@@ -3,6 +3,8 @@ from __future__ import annotations
 import asyncio
 from typing import Awaitable, Callable
 
+from websockets.exceptions import ConnectionClosed
+
 from simple_xiaozhi.utils.logging_config import get_logger
 from simple_xiaozhi.utils.opus_loader import setup_opus
 
@@ -76,6 +78,11 @@ class AudioPipeline:
                 data = await self._queue.get()
                 await self._sender(data)
             except asyncio.CancelledError:
+                break
+            except ConnectionClosed as exc:
+                # 服务端主动断开连接是预期行为，停止发送循环
+                logger.info("Audio send stopped: connection closed (%s)", exc.code)
+                self._send_enabled = False
                 break
             except Exception as exc:
                 logger.warning("Audio send failed: %s", exc)

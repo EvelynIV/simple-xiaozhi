@@ -17,7 +17,7 @@ class Ota:
 
     def __init__(self):
         self.logger = get_logger(__name__)
-        self.config = ConfigManager.get_instance()
+        self.config_manager = ConfigManager.get_instance()
         self.device_fingerprint = DeviceFingerprint.get_instance()
         self.mac_addr = None
         self.ota_version_url = None
@@ -40,11 +40,10 @@ class Ota:
         """
         self.local_ip = await self.get_local_ip()
         # 从配置中获取设备ID（MAC地址）
-        self.mac_addr = self.config.get_config("SYSTEM_OPTIONS.DEVICE_ID")
+        config = self.config_manager.config
+        self.mac_addr = config.SYSTEM_OPTIONS.DEVICE_ID
         # 获取OTA URL
-        self.ota_version_url = self.config.get_config(
-            "SYSTEM_OPTIONS.NETWORK.OTA_VERSION_URL"
-        )
+        self.ota_version_url = config.SYSTEM_OPTIONS.NETWORK.OTA_VERSION_URL
 
     async def get_local_ip(self):
         """
@@ -97,15 +96,15 @@ class Ota:
         # 基础头部
         headers = {
             "Device-Id": self.mac_addr,
-            "Client-Id": self.config.get_config("SYSTEM_OPTIONS.CLIENT_ID"),
+            "Client-Id": self.config_manager.config.SYSTEM_OPTIONS.CLIENT_ID,
             "Content-Type": "application/json",
             "User-Agent": f"{board_type}/{app_name}-{app_version}",
             "Accept-Language": "zh-CN",
         }
 
         # 根据激活版本决定是否添加Activation-Version头部
-        activation_version = self.config.get_config(
-            "SYSTEM_OPTIONS.NETWORK.ACTIVATION_VERSION", "v1"
+        activation_version = (
+            self.config_manager.config.SYSTEM_OPTIONS.NETWORK.ACTIVATION_VERSION
         )
 
         # 只有v2协议才添加Activation-Version头部
@@ -179,11 +178,9 @@ class Ota:
             self.logger.info("发现MQTT配置信息")
             mqtt_info = response_data["mqtt"]
             if mqtt_info:
-                # 更新配置
-                success = self.config.update_config(
-                    "SYSTEM_OPTIONS.NETWORK.MQTT_INFO", mqtt_info
-                )
-                if success:
+                config = self.config_manager.mutable_config
+                config.SYSTEM_OPTIONS.NETWORK.MQTT_INFO = mqtt_info
+                if self.config_manager.save():
                     self.logger.info("MQTT配置已更新")
                     return mqtt_info
                 else:
@@ -202,20 +199,20 @@ class Ota:
         if "websocket" in response_data:
             self.logger.info("发现WebSocket配置信息")
             websocket_info = response_data["websocket"]
+            config = self.config_manager.mutable_config
 
             # 更新WebSocket URL
             if "url" in websocket_info:
-                self.config.update_config(
-                    "SYSTEM_OPTIONS.NETWORK.WEBSOCKET_URL", websocket_info["url"]
-                )
+                config.SYSTEM_OPTIONS.NETWORK.WEBSOCKET_URL = websocket_info["url"]
                 self.logger.info(f"WebSocket URL已更新: {websocket_info['url']}")
 
             # 更新WebSocket Token
             token_value = websocket_info.get("token", "test-token") or "test-token"
-            self.config.update_config(
-                "SYSTEM_OPTIONS.NETWORK.WEBSOCKET_ACCESS_TOKEN", token_value
-            )
-            self.logger.info("WebSocket Token已更新")
+            config.SYSTEM_OPTIONS.NETWORK.WEBSOCKET_ACCESS_TOKEN = token_value
+            if self.config_manager.save():
+                self.logger.info("WebSocket Token已更新")
+            else:
+                self.logger.error("WebSocket配置更新失败")
 
             return websocket_info
         else:

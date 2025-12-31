@@ -19,7 +19,7 @@ class WebsocketProtocol(Protocol):
     def __init__(self):
         super().__init__()
         # 获取配置管理器实例
-        self.config = ConfigManager.get_instance()
+        config = ConfigManager.get_instance().config
         self.websocket = None
         self.connected = False
         self.hello_received = None  # 初始化时先设为 None
@@ -40,14 +40,10 @@ class WebsocketProtocol(Protocol):
         self._max_reconnect_attempts = 0  # 默认不重连
         self._auto_reconnect_enabled = False  # 默认关闭自动重连
 
-        self.WEBSOCKET_URL = self.config.get_config(
-            "SYSTEM_OPTIONS.NETWORK.WEBSOCKET_URL"
-        )
-        access_token = self.config.get_config(
-            "SYSTEM_OPTIONS.NETWORK.WEBSOCKET_ACCESS_TOKEN"
-        )
-        device_id = self.config.get_config("SYSTEM_OPTIONS.DEVICE_ID")
-        client_id = self.config.get_config("SYSTEM_OPTIONS.CLIENT_ID")
+        self.WEBSOCKET_URL = config.SYSTEM_OPTIONS.NETWORK.WEBSOCKET_URL
+        access_token = config.SYSTEM_OPTIONS.NETWORK.WEBSOCKET_ACCESS_TOKEN
+        device_id = config.SYSTEM_OPTIONS.DEVICE_ID
+        client_id = config.SYSTEM_OPTIONS.CLIENT_ID
 
         self.HEADERS = {
             "Authorization": f"Bearer {access_token}",

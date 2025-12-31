@@ -27,17 +27,14 @@ class VLCamera(BaseCamera):
         初始化智普AI摄像头.
         """
         super().__init__()
-        config = ConfigManager.get_instance()
+        config = ConfigManager.get_instance().config
 
         # 初始化OpenAI客户端
         self.client = OpenAI(
-            api_key=config.get_config("CAMERA.VLapi_key"),
-            base_url=config.get_config(
-                "CAMERA.Local_VL_url",
-                "https://open.bigmodel.cn/api/paas/v4/chat/completions",
-            ),
+            api_key=config.CAMERA.VLapi_key,
+            base_url=config.CAMERA.Local_VL_url,
         )
-        self.model = config.get_config("CAMERA.models", "glm-4v-plus")
+        self.model = config.CAMERA.models
         logger.info(f"VL Camera initialized with model: {self.model}")
 
     @classmethod

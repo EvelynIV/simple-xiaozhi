@@ -54,9 +54,9 @@ class PluginShortcutManager:
 
     def __init__(self, loop: Optional[asyncio.AbstractEventLoop]):
         self._main_loop = loop
-        self.config = ConfigManager.get_instance()
-        self.shortcuts_config = self.config.get_config("SHORTCUTS", {}) or {}
-        self.enabled = bool(self.shortcuts_config.get("ENABLED", True))
+        self.config_manager = ConfigManager.get_instance()
+        self.shortcuts_config = self.config_manager.config.SHORTCUTS
+        self.enabled = bool(self.shortcuts_config.ENABLED)
 
         self.pressed_keys: Set[str] = set()
         self.manual_press_active = False
@@ -106,10 +106,17 @@ class PluginShortcutManager:
             "MODE_TOGGLE",
             "WINDOW_TOGGLE",
         ]:
-            cfg = self.shortcuts_config.get(name, {}) or {}
-            modifier = str(cfg.get("modifier", "ctrl")).lower()
-            key = str(cfg.get("key", "")).lower()
-            self.shortcuts[name] = ShortcutConfig(modifier=modifier, key=key)
+            cfg = getattr(self.shortcuts_config, name)
+            modifier_value = cfg.modifier if cfg.modifier is not None else "ctrl"
+            key_value = cfg.key if cfg.key is not None else ""
+            description_value = cfg.description if cfg.description is not None else ""
+            modifier = str(modifier_value).lower()
+            key = str(key_value).lower()
+            self.shortcuts[name] = ShortcutConfig(
+                modifier=modifier,
+                key=key,
+                description=str(description_value),
+            )
 
     async def start(self) -> bool:
         if not self.enabled:
@@ -154,9 +161,9 @@ class PluginShortcutManager:
 
     async def reload_from_config(self):
         try:
-            self.config.reload_config()
-            self.shortcuts_config = self.config.get_config("SHORTCUTS", {}) or {}
-            self.enabled = bool(self.shortcuts_config.get("ENABLED", True))
+            self.config_manager.reload_config()
+            self.shortcuts_config = self.config_manager.config.SHORTCUTS
+            self.enabled = bool(self.shortcuts_config.ENABLED)
             self._load_shortcuts()
             logger.info("快捷键配置已重新加载")
         except Exception as e:
