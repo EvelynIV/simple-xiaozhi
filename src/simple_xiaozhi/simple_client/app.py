@@ -64,6 +64,13 @@ class SimpleClientApp:
         msg_type = data.get("type")
         if msg_type in ("stt", "tts"):
             print(f"[{msg_type}] {data}")
+            # 处理 TTS 事件，控制音频缓存
+            if msg_type == "tts" and self._audio and self._audio._codec:
+                state = data.get("state")
+                if state == "start":
+                    self._audio._codec.start_tts_cache()
+                elif state == "stop":
+                    self._audio._codec.end_tts_cache()
             return
         if msg_type == "llm":
             # emotion = data.get("emotion")

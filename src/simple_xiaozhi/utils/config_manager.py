@@ -78,6 +78,11 @@ class ConfigManager:
             "input_channels": None,
             "output_channels": None,
         },
+        "TTS_CACHE": {
+            "ENABLED": False,
+            "CACHE_DIR": "data-bin/tts",
+            "AUTO_CREATE_SESSION_DIR": True,
+        },
     }
 
     def __new__(cls, *args, **kwargs):
@@ -139,28 +144,15 @@ class ConfigManager:
                 project_root = resource_finder.get_project_root()
                 self.config_dir = project_root / "config"
             self.config_file = self.config_dir / "config.json"
-        self.config_dir.mkdir(parents=True, exist_ok=True)
 
         logger.info(f"Config directory: {self.config_dir.absolute()}")
         logger.info(f"Config file: {self.config_file.absolute()}")
 
     def _ensure_required_directories(self):
         """
-        确保必要的目录存在.
+        确保必要的目录存在（已禁用，目录应由用户手动创建）.
         """
-        project_root = resource_finder.get_project_root()
-
-        # 创建 models 目录
-        models_dir = project_root / "models"
-        if not models_dir.exists():
-            models_dir.mkdir(parents=True, exist_ok=True)
-            logger.info(f"创建模型目录: {models_dir.absolute()}")
-
-        # 创建 cache 目录
-        cache_dir = project_root / "cache"
-        if not cache_dir.exists():
-            cache_dir.mkdir(parents=True, exist_ok=True)
-            logger.info(f"创建缓存目录: {cache_dir.absolute()}")
+        pass
 
     def _build_default_config(self) -> DictConfig:
         return OmegaConf.create(self.DEFAULT_CONFIG)
@@ -184,23 +176,11 @@ class ConfigManager:
 
     def _save_config(self, config: DictConfig) -> bool:
         """
-        保存配置到文件.
+        保存配置到文件（已禁用，配置文件为只读）.
         """
-        try:
-            # 确保配置目录存在
-            self.config_dir.mkdir(parents=True, exist_ok=True)
-
-            # 保存配置文件
-            data = OmegaConf.to_container(config, resolve=True)
-            self.config_file.write_text(
-                json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
-            )
-            logger.debug(f"配置已保存到: {self.config_file}")
-            return True
-
-        except Exception as e:
-            logger.error(f"配置保存错误: {e}")
-            return False
+        # 配置文件应为只读，不在运行时写入
+        logger.debug("配置保存已禁用，配置文件为只读")
+        return True
 
     def set_overrides(self, overrides: Dict[str, Any] | None) -> None:
         self._overrides = OmegaConf.create(overrides or {})

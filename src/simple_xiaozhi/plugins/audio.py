@@ -66,7 +66,7 @@ class AudioPlugin(Plugin):
                 self._in_silence_period = False
 
     async def on_incoming_json(self, message: Any) -> None:
-        """处理 TTS 事件，控制音乐播放.
+        """处理 TTS 事件，控制音乐播放和音频缓存.
 
         Args:
             message: JSON消息，包含 type 和 state 字段
@@ -75,14 +75,18 @@ class AudioPlugin(Plugin):
             return
 
         try:
-            # 监听 TTS 状态变化，控制音乐播放
+            # 监听 TTS 状态变化，控制音乐播放和音频缓存
             if message.get("type") == "tts":
                 state = message.get("state")
                 if state == "start":
-                    # TTS 开始：先清空音频队列，再暂停音乐
+                    # TTS 开始：先清空音频队列，再暂停音乐，开始缓存
                     await self._pause_music_for_tts()
+                    if self.codec:
+                        self.codec.start_tts_cache()
                 elif state == "stop":
-                    # TTS 结束：恢复音乐播放
+                    # TTS 结束：保存缓存，恢复音乐播放
+                    if self.codec:
+                        self.codec.end_tts_cache()
                     await self._resume_music_after_tts()
                     await self.codec.clear_audio_queue()
         except Exception as e:

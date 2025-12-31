@@ -9,6 +9,7 @@ import sounddevice as sd
 import soxr
 
 from simple_xiaozhi.audio_codecs.aec_processor import AECProcessor
+from simple_xiaozhi.audio_codecs.tts_cache import TTSCache
 from simple_xiaozhi.constants.constants import AudioConfig
 from simple_xiaozhi.utils.audio_utils import (
     downmix_to_mono,
@@ -106,6 +107,9 @@ class AudioCodec:
         self.audio_processor = audio_processor
         self._aec_enabled = False
 
+        # TTS 音频缓存
+        self._tts_cache = TTSCache()
+
         # 状态标记
         self._is_closing = False
 
@@ -142,6 +146,9 @@ class AudioCodec:
                 except Exception as e:
                     logger.warning(f"AEC处理器初始化失败: {e}")
                     self._aec_enabled = False
+
+            # 启动 TTS 缓存会话
+            self._tts_cache.start_session()
 
             logger.info("AudioCodec 初始化完成")
 
@@ -234,19 +241,6 @@ class AudioCodec:
         logger.info(
             f"选择输出设备: {out_info['name']} ({self.device_output_sample_rate}Hz, {self.output_channels}ch)"
         )
-
-        # 保存配置（首次运行时保存）
-        config = self.config_manager.mutable_config
-        config.AUDIO_DEVICES.input_device_id = self.mic_device_id
-        config.AUDIO_DEVICES.input_device_name = in_info["name"]
-        config.AUDIO_DEVICES.input_sample_rate = self.device_input_sample_rate
-        config.AUDIO_DEVICES.input_channels = self.input_channels
-        config.AUDIO_DEVICES.output_device_id = self.speaker_device_id
-        config.AUDIO_DEVICES.output_device_name = out_info["name"]
-        config.AUDIO_DEVICES.output_sample_rate = self.device_output_sample_rate
-        config.AUDIO_DEVICES.output_channels = self.output_channels
-        if not self.config_manager.save():
-            logger.error("保存音频设备配置失败")
 
     async def _create_opus_codecs(self):
         """
@@ -606,6 +600,14 @@ class AudioCodec:
             self._audio_listeners.remove(listener)
             logger.info(f"已移除音频监听器: {listener.__class__.__name__}")
 
+    def start_tts_cache(self):
+        """开始收集 TTS 音频（TTS 开始时调用）."""
+        self._tts_cache.start_tts()
+
+    def end_tts_cache(self):
+        """结束收集并保存 TTS 音频（TTS 结束时调用）."""
+        self._tts_cache.end_tts()
+
     async def write_audio(self, opus_data: bytes):
         """解码并播放音频（服务端 Opus 数据 → 扬声器）
 
@@ -629,6 +631,9 @@ class AudioCodec:
                     f"解码音频长度异常: {len(audio_array)}, 期望: {expected_length}"
                 )
                 return
+
+            # 缓存 TTS 音频（如果启用）
+            self._tts_cache.append_audio(audio_array)
 
             # 放入播放队列（使用工具函数安全入队）
             if not safe_queue_put(
@@ -821,9 +826,10 @@ class AudioCodec:
         2. 清空回调和监听器引用
         3. 清空队列和缓冲区
         4. 关闭AEC处理器
-        5. 清理重采样器
-        6. 释放编解码器
-        7. 执行垃圾回收
+        5. 结束 TTS 缓存会话
+        6. 清理重采样器
+        7. 释放编解码器
+        8. 执行垃圾回收
         """
         if self._is_closing:
             return
@@ -857,17 +863,20 @@ class AudioCodec:
                 finally:
                     self.audio_processor = None
 
-            # 5. 清理重采样器
+            # 5. 结束 TTS 缓存会话
+            self._tts_cache.end_session()
+
+            # 6. 清理重采样器
             await self._cleanup_resampler(self.input_resampler, "输入")
             await self._cleanup_resampler(self.output_resampler, "输出")
             self.input_resampler = None
             self.output_resampler = None
 
-            # 6. 释放编解码器
+            # 7. 释放编解码器
             self.opus_encoder = None
             self.opus_decoder = None
 
-            # 7. 垃圾回收
+            # 8. 垃圾回收
             gc.collect()
 
             logger.info("音频资源已完全释放")

@@ -61,7 +61,7 @@ class ResourceFinder:
             return self._detect_project_root(default=self._base_dir)
         return self._base_dir
 
-    def get_user_data_dir(self, create: bool = True) -> Path:
+    def get_user_data_dir(self, create: bool = False) -> Path:
         """
         用户数据（可写）目录。
         """
@@ -76,7 +76,7 @@ class ResourceFinder:
             p.mkdir(parents=True, exist_ok=True)
         return p.resolve()
 
-    def get_user_cache_dir(self, create: bool = True) -> Path:
+    def get_user_cache_dir(self, create: bool = False) -> Path:
         p = self.get_user_data_dir(create=False) / "cache"
         if create:
             p.mkdir(parents=True, exist_ok=True)
@@ -356,11 +356,11 @@ def get_project_root() -> Path:
     return resource_finder.get_project_root()
 
 
-def get_user_data_dir(create: bool = True) -> Path:
+def get_user_data_dir(create: bool = False) -> Path:
     return resource_finder.get_user_data_dir(create)
 
 
-def get_user_cache_dir(create: bool = True) -> Path:
+def get_user_cache_dir(create: bool = False) -> Path:
     return resource_finder.get_user_cache_dir(create)
 
 
