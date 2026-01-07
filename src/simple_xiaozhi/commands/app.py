@@ -2,19 +2,39 @@ import typer
 import asyncio
 from pathlib import Path
 
-from simple_xiaozhi.simple_client import SimpleClientApp
+from simple_xiaozhi.application import Application
 from simple_xiaozhi.utils.config_manager import ConfigManager
 from simple_xiaozhi.utils.logging_config import setup_logging
 
 app = typer.Typer()
 
-async def _run_simple_client() -> None:
-    client_app = SimpleClientApp()
+async def _auto_start_conversation(application: Application) -> None:
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + 10.0
+    while loop.time() < deadline:
+        if application.protocol is not None and application._connect_lock is not None:
+            break
+        if not application.running and application.protocol is None:
+            return
+        await asyncio.sleep(0.05)
+    if application.protocol is None or application._connect_lock is None:
+        return
+    await application.start_auto_conversation()
+
+async def _run_application() -> None:
+    application = Application.get_instance()
+    auto_task = asyncio.create_task(_auto_start_conversation(application))
     try:
-        await client_app.run()
+        await application.run(protocol="websocket", mode="cli")
     except asyncio.CancelledError:
-        await client_app.close()
+        await application.shutdown()
         raise
+    finally:
+        auto_task.cancel()
+        try:
+            await auto_task
+        except asyncio.CancelledError:
+            pass
 
 
 @app.command()
@@ -69,7 +89,7 @@ def simple_client(
 
     ConfigManager.get_instance(config_dir=config_dir, overrides=overrides)
     try:
-        asyncio.run(_run_simple_client())
+        asyncio.run(_run_application())
     except KeyboardInterrupt:
         pass
 
